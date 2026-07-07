@@ -4,11 +4,11 @@ import (   // Importing necessary packages
 	"sync"
 	"time"
 )
-
+	
 type SlidingWindowLimiter struct {
 	mu          sync.Mutex
 	prevCount   int
-	currCount   int 		// Count of requests in the previous and current window
+	currCount   int 		//Limiter structure
 	limit       int
 	windowSize  time.Duration
 	windowStart time.Time
@@ -17,19 +17,21 @@ type SlidingWindowLimiter struct {
 func (l *SlidingWindowLimiter) Allow() bool {
 	l.mu.Lock()
 	defer l.mu.Unlock() 		// Locking to ensure thread safety
+
 	now := time.Now()
 	elapsed := now.Sub(l.windowStart)
-	if elapsed >= l.windowSize {
+	if elapsed >= l.windowSize {     //Checking the window change
 		l.prevCount = l.currCount
 		l.currCount = 0
 		l.windowStart = now
 	}
 	progress := float64(elapsed) / float64(l.windowSize)
-	prevWeight := 1.0 - progress   // Calculate the weight of the previous window based on elapsed time
+	prevWeight := 1.0 - progress   //Mathematical part
 	expectedCount := float64(l.prevCount)*prevWeight + float64(l.currCount)
+
 	if expectedCount >= float64(l.limit) {
 		return false
-	}
+	}                 					// allow/deny
 	l.currCount++
 	return true
 }
@@ -40,7 +42,7 @@ func main() {
 		limit:       5,  
 		windowStart: time.Now(),
 		prevCount:   0,
-		currCount:   0,
+		currCount:   0,             //test run
 	}
 
 	for i := 0; i < 10; i++ {
