@@ -20,11 +20,18 @@ func (l *SlidingWindowLimiter) Allow() bool {
 
 	now := time.Now()
 	elapsed := now.Sub(l.windowStart)
-	if elapsed >= l.windowSize {     //Checking the window change
-		l.prevCount = l.currCount
-		l.currCount = 0
-		l.windowStart = now
-	}
+
+	if elapsed >= l.windowSize {
+    windowsPassed := int(elapsed / l.windowSize)
+    if windowsPassed == 1 {
+        l.prevCount = l.currCount           
+    } else {
+        l.prevCount = 0 
+    }
+    l.currCount = 0
+    l.windowStart = l.windowStart.Add(time.Duration(windowsPassed) * l.windowSize)
+    elapsed = now.Sub(l.windowStart)
+}
 	progress := float64(elapsed) / float64(l.windowSize)
 	prevWeight := 1.0 - progress   //Mathematical part
 	expectedCount := float64(l.prevCount)*prevWeight + float64(l.currCount)
