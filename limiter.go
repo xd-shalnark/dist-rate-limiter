@@ -4,7 +4,14 @@ import (   // Importing necessary packages
 	"sync"
 	"time"
 )
-	
+
+type RateLimiter struct {
+    mu       sync.RWMutex
+    limiters map[string]*SlidingWindowLimiter 
+    limit    int
+    window   time.Duration
+}
+
 type SlidingWindowLimiter struct {
 	mu          sync.Mutex
 	prevCount   int
@@ -12,6 +19,22 @@ type SlidingWindowLimiter struct {
 	limit       int
 	windowSize  time.Duration
 	windowStart time.Time
+}
+
+func (r *RateLimiter) Allow(key string) bool {
+    r.mu.Lock()
+    limiter, exists := r.limiters[key]
+    if !exists {
+        limiter = &SlidingWindowLimiter{
+            limit:       r.limit,
+            windowSize:  r.window,
+            windowStart: time.Now(),
+        }
+        r.limiters[key] = limiter
+    }
+    r.mu.Unlock()
+
+    return limiter.Allow()
 }
 
 func (l *SlidingWindowLimiter) Allow() bool {
