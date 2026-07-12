@@ -66,21 +66,24 @@ func (l *SlidingWindowLimiter) Allow() bool {
 	return true
 }
 
-func main() {   	
-	limiter := &SlidingWindowLimiter{
-		windowSize:  1 * time.Minute,
-		limit:       5,  
-		windowStart: time.Now(),
-		prevCount:   0,
-		currCount:   0,             //test run
+func main() {
+	rl := &RateLimiter{
+		limiters: make(map[string]*SlidingWindowLimiter),
+		limit:    3,
+		window:   1 * time.Minute,
 	}
 
-	for i := 0; i < 10; i++ {
-		if limiter.Allow() {
-			println("Request allowed")
+	for i := 0; i < 5; i++ {
+		if rl.Allow("user-A") {
+			println("user-A: allowed")
 		} else {
-			println("Request denied")
+			println("user-A: denied")
 		}
-		time.Sleep(1 * time.Second)
+	}
+
+	if rl.Allow("user-B") {
+		println("user-B: allowed")
+	} else {
+		println("user-B: denied")
 	}
 }
