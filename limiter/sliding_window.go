@@ -1,16 +1,9 @@
-package main
+package limiter
 
 import (   // Importing necessary packages
 	"sync"
 	"time"
 )
-
-type RateLimiter struct {
-    mu       sync.RWMutex
-    limiters map[string]*SlidingWindowLimiter 
-    limit    int
-    window   time.Duration
-}
 
 type SlidingWindowLimiter struct {
 	mu          sync.Mutex
@@ -19,22 +12,6 @@ type SlidingWindowLimiter struct {
 	limit       int
 	windowSize  time.Duration
 	windowStart time.Time
-}
-
-func (r *RateLimiter) Allow(key string) bool {
-    r.mu.Lock()
-    limiter, exists := r.limiters[key]
-    if !exists {
-        limiter = &SlidingWindowLimiter{
-            limit:       r.limit,
-            windowSize:  r.window,
-            windowStart: time.Now(),
-        }
-        r.limiters[key] = limiter
-    }
-    r.mu.Unlock()
-
-    return limiter.Allow()
 }
 
 func (l *SlidingWindowLimiter) Allow() bool {
@@ -66,24 +43,10 @@ func (l *SlidingWindowLimiter) Allow() bool {
 	return true
 }
 
-func main() {
-	rl := &RateLimiter{
-		limiters: make(map[string]*SlidingWindowLimiter),
-		limit:    3,
-		window:   1 * time.Minute,
-	}
-
-	for i := 0; i < 5; i++ {
-		if rl.Allow("user-A") {
-			println("user-A: allowed")
-		} else {
-			println("user-A: denied")
-		}
-	}
-
-	if rl.Allow("user-B") {
-		println("user-B: allowed")
-	} else {
-		println("user-B: denied")
+func NewSlidingWindowLimiter(limit int, windowSize time.Duration) *SlidingWindowLimiter {
+	return &SlidingWindowLimiter{
+		limit:       limit,
+		windowSize:  windowSize,
+		windowStart: time.Now(),
 	}
 }
