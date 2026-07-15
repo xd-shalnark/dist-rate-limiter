@@ -11,7 +11,7 @@ func main() {
 
 	for i := 0; i < 5; i++ {
 		if rl.Allow("user-A") {
-			println("user-A: allowed")
+			println("user-A: allowed")      // user-A is allowed for the first 3 requests
 		} else {
 			println("user-A: denied")
 		}
