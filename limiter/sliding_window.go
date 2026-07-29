@@ -11,7 +11,7 @@ type SlidingWindowLimiter struct {
 	currCount   int //Limiter structure
 	limit       int
 	windowSize  time.Duration
-	windowStart time.Time
+	windowStart time.Time // start time of the current window
 }
 
 func (l *SlidingWindowLimiter) Allow() bool {
