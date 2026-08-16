@@ -10,10 +10,9 @@ import (
 // RateLimiter manages a separate sliding-window limiter per key
 type RateLimiter struct {
 	mu       sync.RWMutex
-	limiters map[string]*entry
+	limiters map[string]*limiter.SlidingWindowLimiter
 	limit    int
 	window   time.Duration
-	ttl      time.Duration
 }
 
 // Allow reports whether a request for the given key is allowed.
