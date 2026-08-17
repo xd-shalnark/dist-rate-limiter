@@ -1,25 +1,27 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"ratelimiter/registry"
 )
 
 func main() {
-	rl := registry.NewRateLimiter(3, time.Minute)
+	// limit=3 запроса, window=1 минута, ttl=5 минут неактивности до эвикшна ключа
+	rl := registry.NewRateLimiter(3, time.Minute, 5*time.Minute)
 
 	for i := 0; i < 5; i++ {
 		if rl.Allow("user-A") {
-			println("user-A: allowed")      // user-A is allowed for the first 3 requests
+			fmt.Println("user-A: allowed") // первые 3 запроса пройдут
 		} else {
-			println("user-A: denied")
+			fmt.Println("user-A: denied")
 		}
 	}
 
 	if rl.Allow("user-B") {
-		println("user-B: allowed")
+		fmt.Println("user-B: allowed")
 	} else {
-		println("user-B: denied")
+		fmt.Println("user-B: denied")
 	}
 }
