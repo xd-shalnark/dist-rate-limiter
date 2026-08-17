@@ -1,35 +1,36 @@
 package registry
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
 	"ratelimiter/limiter"
 )
 
-// entry хранит лимитер конкретного ключа + время последнего обращения,
-// нужно для TTL-эвикшна в cleanupLoop.
 type entry struct {
 	lim      *limiter.SlidingWindowLimiter
 	lastSeen time.Time
 }
 
-// RateLimiter manages a separate sliding-window limiter per key
 type RateLimiter struct {
 	mu       sync.RWMutex
-	limiters map[string]*entry // ← тип поля теперь map[string]*entry, а не *SlidingWindowLimiter
+	limiters map[string]*entry
 	limit    int
 	window   time.Duration
-	ttl      time.Duration // ← новое поле, которого не хватало
+	ttl      time.Duration
 }
 
-// Allow reports whether a request for the given key is allowed.
-// Creates a new limiter for the key on first use.
 func (r *RateLimiter) Allow(key string) bool {
 	r.mu.Lock()
 	e, exists := r.limiters[key]
 	if !exists {
-		e = &entry{lim: limiter.NewSlidingWindowLimiter(r.limit, r.window)}
+
+		lim, err := limiter.NewSlidingWindowLimiter(r.limit, r.window)
+		if err != nil {
+			panic(fmt.Sprintf("registry: invariant violated, limit/window became invalid after construction: %v", err))
+		}
+		e = &entry{lim: lim}
 		r.limiters[key] = e
 	}
 	e.lastSeen = time.Now()
@@ -38,8 +39,6 @@ func (r *RateLimiter) Allow(key string) bool {
 	return e.lim.Allow()
 }
 
-// cleanupLoop периодически удаляет записи, к которым давно не обращались,
-// чтобы карта limiters не росла бесконечно (защита от утечки памяти).
 func (r *RateLimiter) cleanupLoop(interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
@@ -55,14 +54,24 @@ func (r *RateLimiter) cleanupLoop(interval time.Duration) {
 }
 
 // NewRateLimiter creates a RateLimiter allowing up to `limit` requests
-// per `window`, and evicts idle keys after `ttl` of inactivity.
-func NewRateLimiter(limit int, window, ttl time.Duration) *RateLimiter {
+// per `window`, evicting idle keys after `ttl` of inactivity.
+// Returns an error if limit/window are invalid — caught once at startup
+// instead of panicking later on the first request.
+func NewRateLimiter(limit int, window, ttl time.Duration) (*RateLimiter, error) {
+
+	if _, err := limiter.NewSlidingWindowLimiter(limit, window); err != nil {
+		return nil, fmt.Errorf("registry: invalid RateLimiter config: %w", err)
+	}
+	if ttl <= 0 {
+		return nil, fmt.Errorf("registry: ttl must be positive, got %v", ttl)
+	}
+
 	r := &RateLimiter{
 		limiters: make(map[string]*entry),
 		limit:    limit,
 		window:   window,
 		ttl:      ttl,
 	}
-	go r.cleanupLoop(time.Minute) // фоновая горутина очистки
-	return r
+	go r.cleanupLoop(time.Minute)
+	return r, nil
 }

@@ -2,18 +2,22 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	"ratelimiter/registry"
 )
 
 func main() {
-	// limit=3 запроса, window=1 минута, ttl=5 минут неактивности до эвикшна ключа
-	rl := registry.NewRateLimiter(3, time.Minute, 5*time.Minute)
+
+	rl, err := registry.NewRateLimiter(3, time.Minute, 5*time.Minute)
+	if err != nil {
+		log.Fatalf("failed to create rate limiter: %v", err)
+	}
 
 	for i := 0; i < 5; i++ {
 		if rl.Allow("user-A") {
-			fmt.Println("user-A: allowed") // первые 3 запроса пройдут
+			fmt.Println("user-A: allowed")
 		} else {
 			fmt.Println("user-A: denied")
 		}
@@ -23,5 +27,10 @@ func main() {
 		fmt.Println("user-B: allowed")
 	} else {
 		fmt.Println("user-B: denied")
+	}
+
+	_, err = registry.NewRateLimiter(5, 0, time.Minute)
+	if err != nil {
+		fmt.Println("ожидаемая ошибка на невалидном конфиге:", err)
 	}
 }

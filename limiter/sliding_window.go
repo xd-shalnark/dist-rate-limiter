@@ -1,6 +1,7 @@
 package limiter
 
-import ( // Importing necessary packages
+import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -8,15 +9,15 @@ import ( // Importing necessary packages
 type SlidingWindowLimiter struct {
 	mu          sync.Mutex
 	prevCount   int
-	currCount   int //Limiter structure
+	currCount   int
 	limit       int
-	windowSize  time.Duration // windowSize sets the window size
-	windowStart time.Time     // start time of the current window
+	windowSize  time.Duration
+	windowStart time.Time
 }
 
 func (l *SlidingWindowLimiter) Allow() bool {
 	l.mu.Lock()
-	defer l.mu.Unlock() // Locking to ensure thread safety
+	defer l.mu.Unlock()
 
 	now := time.Now()
 	elapsed := now.Sub(l.windowStart)
@@ -33,20 +34,27 @@ func (l *SlidingWindowLimiter) Allow() bool {
 		elapsed = now.Sub(l.windowStart)
 	}
 	progress := float64(elapsed) / float64(l.windowSize)
-	prevWeight := 1.0 - progress //Mathematical part
+	prevWeight := 1.0 - progress
 	expectedCount := float64(l.prevCount)*prevWeight + float64(l.currCount)
 
 	if expectedCount >= float64(l.limit) {
 		return false
-	} // allow/deny
+	}
 	l.currCount++
 	return true
 }
 
-func NewSlidingWindowLimiter(limit int, windowSize time.Duration) *SlidingWindowLimiter {
+// "integer divide by zero" в Allow(), если windowSize == 0.
+func NewSlidingWindowLimiter(limit int, windowSize time.Duration) (*SlidingWindowLimiter, error) {
+	if limit <= 0 {
+		return nil, fmt.Errorf("limiter: limit must be positive, got %d", limit)
+	}
+	if windowSize <= 0 {
+		return nil, fmt.Errorf("limiter: windowSize must be positive, got %v", windowSize)
+	}
 	return &SlidingWindowLimiter{
 		limit:       limit,
 		windowSize:  windowSize,
 		windowStart: time.Now(),
-	}
+	}, nil
 }
