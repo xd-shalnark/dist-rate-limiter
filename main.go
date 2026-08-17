@@ -31,6 +31,6 @@ func main() {
 
 	_, err = registry.NewRateLimiter(5, 0, time.Minute)
 	if err != nil {
-		fmt.Println("ожидаемая ошибка на невалидном конфиге:", err)
+		fmt.Println("expected error on invalid config:", err)
 	}
 }
