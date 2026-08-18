@@ -13,7 +13,7 @@ func main() {
 	rl, err := registry.NewRateLimiter(3, time.Minute, 5*time.Minute)
 	if err != nil {
 		log.Fatalf("failed to create rate limiter: %v", err)
-	}
+	}       
 
 	for i := 0; i < 5; i++ {
 		if rl.Allow("user-A") {

@@ -34,7 +34,7 @@ func (l *SlidingWindowLimiter) Allow() bool {
 		elapsed = now.Sub(l.windowStart)
 	}
 	progress := float64(elapsed) / float64(l.windowSize)
-	prevWeight := 1.0 - progress
+	prevWeight := 1.0 - progress     
 	expectedCount := float64(l.prevCount)*prevWeight + float64(l.currCount)
 
 	if expectedCount >= float64(l.limit) {
